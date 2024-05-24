@@ -116,6 +116,11 @@ instance Yesod App where
                     , menuItemRoute = HomeR
                     , menuItemAccessCallback = True
                     }
+                ,   NavbarLeft $ MenuItem
+                    { menuItemLabel = "New Post"
+                    , menuItemRoute = PostNewR
+                    , menuItemAccessCallback = True
+                    }
                 , NavbarLeft $ MenuItem
                     { menuItemLabel = "Profile"
                     , menuItemRoute = ProfileR
