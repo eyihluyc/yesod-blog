@@ -2,7 +2,8 @@
 
 <div .jumbotron>
     <ul>
-        $forall Entity id post <- allPosts
+        $forall (E.Value blogid, E.Value title, E.Value name) <- allPosts
             <h4>
                 <li>
-                    <a href=@{PostDetailsR id}>#{blogPostTitle post}
+                    <a href=@{PostDetailsR blogid}>#{title}
+                    by #{name}
