@@ -9,6 +9,8 @@ dependencies:
 - yesod-auth >=1.6 && <1.7
 - yesod-static >=1.6 && <1.7
 - yesod-form >=1.6 && <1.8
+- mime-mail-ses
+- mime-mail
 - classy-prelude >=1.5 && <1.6
 - classy-prelude-conduit >=1.5 && <1.6
 - classy-prelude-yesod >=1.5 && <1.6
@@ -43,6 +45,7 @@ dependencies:
 - wai
 - foreign-store
 - yesod-markdown
+- blaze-html
 # The library contains all of our application code. The executable
 # defined below is just a thin wrapper.
 library:

@@ -1,10 +1,11 @@
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE ExplicitForAll #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE ExplicitForAll #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE InstanceSigs #-}
 
@@ -17,15 +18,19 @@ import Text.Hamlet          (hamletFile)
 import Text.Jasmine         (minifym)
 import Control.Monad.Logger (LogSource)
 
--- Used only when in "auth-dummy-login" setting is enabled.
-import Yesod.Auth.Dummy
+import Yesod.Auth.Email
+import Network.Mail.Mime
 
-import Yesod.Auth.OpenId    (authOpenId, IdentifierType (Claimed))
 import Yesod.Default.Util   (addStaticContentExternal)
 import Yesod.Core.Types     (Logger)
 import qualified Yesod.Core.Unsafe as Unsafe
 import qualified Data.CaseInsensitive as CI
 import qualified Data.Text.Encoding as TE
+
+import qualified Data.Text.Lazy.Encoding
+import           Text.Blaze.Html.Renderer.Utf8 (renderHtml)
+import           Text.Hamlet                   (shamlet)
+import           Text.Shakespeare.Text         (stext)
 
 -- | The foundation datatype for your application. This can be a good place to
 -- keep settings and values requiring initialization before your application
@@ -242,7 +247,7 @@ instance YesodPersistRunner App where
     getDBRunner = defaultGetDBRunner appConnPool
 
 instance YesodAuth App where
-    type AuthId App = UserId
+    type AuthId App = AuthorId
 
     -- Where to send a user after successful login
     loginDest :: App -> Route App
@@ -257,19 +262,88 @@ instance YesodAuth App where
     authenticate :: (MonadHandler m, HandlerSite m ~ App)
                  => Creds App -> m (AuthenticationResult App)
     authenticate creds = liftHandler $ runDB $ do
-        x <- getBy $ UniqueUser $ credsIdent creds
-        case x of
-            Just (Entity uid _) -> return $ Authenticated uid
-            Nothing -> Authenticated <$> insert User
-                { userIdent = credsIdent creds
-                , userPassword = Nothing
-                }
+        x <- insertBy $ Author (credsIdent creds) Nothing Nothing False
+        return $ Authenticated $
+            case x of
+                Left (Entity userid _) -> userid -- existing user
+                Right userid -> userid -- newly added user
 
-    -- You can add other plugins like Google Email, email or OAuth here
     authPlugins :: App -> [AuthPlugin App]
-    authPlugins app = [authOpenId Claimed []] ++ extraAuthPlugins
-        -- Enable authDummy login if enabled.
-        where extraAuthPlugins = [authDummy | appAuthDummyLogin $ appSettings app]
+    authPlugins app = [authEmail]
+
+instance YesodAuthEmail App where
+    type AuthEmailId App = AuthorId
+
+    afterPasswordRoute _ = HomeR
+
+    addUnverified email verkey =
+        liftHandler $ runDB $ insert $ Author email Nothing (Just verkey) False
+
+    sendVerifyEmail email _ verurl = do
+        -- Print out to the console the verification email, for easier
+        -- debugging.
+        liftIO $ putStrLn $ "Copy/ Paste this URL in your browser:" <> verurl
+
+        -- Send email.
+        liftIO $ renderSendMail (emptyMail $ Address Nothing "noreply")
+            { mailTo = [Address Nothing email]
+            , mailHeaders =
+                [ ("Subject", "Verify your email address")
+                ]
+            , mailParts = [[textPart, htmlPart]]
+            }
+      where
+        textPart = Part
+            { partType = "text/plain; charset=utf-8"
+            , partEncoding = None
+            , partDisposition = DefaultDisposition
+            , partContent = PartContent $ Data.Text.Lazy.Encoding.encodeUtf8
+                [stext|
+                    Please confirm your email address by clicking on the link below.
+
+                    #{verurl}
+
+                    Thank you
+                |]
+            , partHeaders = []
+            }
+        htmlPart = Part
+            { partType = "text/html; charset=utf-8"
+            , partEncoding = None
+            , partDisposition = DefaultDisposition
+            , partContent = PartContent $ renderHtml
+                [shamlet|
+                    <p>Please confirm your email address by clicking on the link below.
+                    <p>
+                        <a href=#{verurl}>#{verurl}
+                    <p>Thank you
+                |]
+            , partHeaders = []
+            }
+    getVerifyKey = liftHandler . runDB . fmap (join . fmap authorVerkey) . get
+    setVerifyKey uid key = liftHandler $ runDB $ update uid [AuthorVerkey =. Just key]
+    verifyAccount uid = liftHandler $ runDB $ do
+        mu <- get uid
+        case mu of
+            Nothing -> return Nothing
+            Just u -> do
+                update uid [AuthorVerified =. True, AuthorVerkey =. Nothing]
+                return $ Just uid
+    getPassword = liftHandler . runDB . fmap (join . fmap authorPassword) . get
+    setPassword uid pass = liftHandler . runDB $ update uid [AuthorPassword =. Just pass]
+    getEmailCreds email = liftHandler $ runDB $ do
+        mu <- getBy $ UniqueAuthor email
+        case mu of
+            Nothing -> return Nothing
+            Just (Entity uid u) -> return $ Just EmailCreds
+                { emailCredsId = uid
+                , emailCredsAuthId = Just uid
+                , emailCredsStatus = isJust $ authorPassword u
+                , emailCredsVerkey = authorVerkey u
+                , emailCredsEmail = email
+                }
+    getEmail = liftHandler . runDB . fmap (fmap authorEmail) . get
+
 
 -- | Access function to determine if a user is logged in.
 isAuthenticated :: Handler AuthResult
