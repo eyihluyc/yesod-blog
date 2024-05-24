@@ -12,3 +12,5 @@
 
 /posts/new PostNewR GET POST
 /posts/!#BlogPostId PostDetailsR GET
+/authors AuthorsR GET
+/authors/#AuthorId AuthorDetailsR GET

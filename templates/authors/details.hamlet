@@ -1,0 +1,8 @@
+<h1> Posts by #{authorEmail author}
+
+<div .jumbotron>
+    <ul>
+        $forall Entity postId post <- authorPosts
+            <h4>
+                <li>
+                    <a href=@{PostDetailsR postId}>#{blogPostTitle post}

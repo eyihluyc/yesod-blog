@@ -126,6 +126,11 @@ instance Yesod App where
                     , menuItemRoute = PostNewR
                     , menuItemAccessCallback = True
                     }
+                ,   NavbarLeft $ MenuItem
+                    { menuItemLabel = "Authors"
+                    , menuItemRoute = AuthorsR
+                    , menuItemAccessCallback = True
+                    }
                 , NavbarLeft $ MenuItem
                     { menuItemLabel = "Profile"
                     , menuItemRoute = ProfileR
@@ -178,11 +183,13 @@ instance Yesod App where
     isAuthorized RobotsR _ = return Authorized
     isAuthorized (StaticR _) _ = return Authorized
     isAuthorized PostNewR False = return Authorized
-    isAuthorized PostNewR True = isAuthenticated
     isAuthorized (PostDetailsR _) _ = return Authorized
+    isAuthorized AuthorsR _ = return Authorized
+    isAuthorized (AuthorDetailsR _) _ = return Authorized
 
     -- the profile route requires that the user is authenticated, so we
     -- delegate to that function
+    isAuthorized PostNewR True = isAuthenticated
     isAuthorized ProfileR _ = isAuthenticated
 
     -- This function creates static content files in the static folder

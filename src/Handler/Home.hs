@@ -20,6 +20,7 @@ getHomeR = do
                 ( blog_post   ^. BlogPostId
                 , blog_post   ^. BlogPostTitle
                 , author      ^. AuthorEmail
+                , author      ^. AuthorId
                 )
     defaultLayout $ do
         $(widgetFile "posts/index")

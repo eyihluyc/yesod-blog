@@ -2,8 +2,9 @@
 
 <div .jumbotron>
     <ul>
-        $forall (E.Value blogid, E.Value title, E.Value name) <- allPosts
+        $forall (E.Value blogid, E.Value title, E.Value name, E.Value authorId) <- allPosts
             <h4>
                 <li>
                     <a href=@{PostDetailsR blogid}>#{title}
-                    by #{name}
+                    by 
+                    <a href=@{AuthorDetailsR authorId}>#{name}

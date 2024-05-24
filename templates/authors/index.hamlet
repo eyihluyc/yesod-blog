@@ -1,0 +1,8 @@
+<h1> All Authors
+
+<div .jumbotron>
+    <ul>
+        $forall Entity authorId author <- allAuthors
+            <h4>
+                <li>
+                    <a href=@{AuthorDetailsR authorId}>#{authorEmail author}
