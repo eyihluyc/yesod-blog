@@ -7,25 +7,27 @@ import Import
 import Yesod.Form.Bootstrap3
 import Yesod.Markdown (markdownField)
 
-blogPostForm :: AForm Handler BlogPost
-blogPostForm = BlogPost
+blogPostForm :: UserId -> AForm Handler BlogPost
+blogPostForm userId = BlogPost
     <$> areq textField (bfs ("Title" :: Text)) Nothing
     <*> areq markdownField (bfs ("Article" :: Text)) Nothing
+    <*> pure userId
 
 getPostNewR :: Handler Html
 getPostNewR = do
-    -- widget is a bundle of html, javascript and css to embed in the page
-    -- form is a widget we're going to embed
-    (widget, enctype) <- generateFormPost $ renderBootstrap3 BootstrapBasicForm blogPostForm
+    userID <- requireAuthId
+    (widget, enctype) <- generateFormPost $ renderBootstrap3 BootstrapBasicForm (blogPostForm userID)
     defaultLayout $ do
         setTitle "New Post"
         $(widgetFile "posts/new")
 
 postPostNewR :: Handler Html
 postPostNewR = do
-    ((res, widget), enctype) <- runFormPost $ renderBootstrap3 BootstrapBasicForm blogPostForm
+    userID <- requireAuthId
+    ((res, widget), enctype) <- runFormPost $ renderBootstrap3 BootstrapBasicForm (blogPostForm userID)
     case res of
         FormSuccess blogPost -> do
-            blogPostId <-runDB $ insert blogPost
+            let blogPostWithUser = blogPost { blogPostAuthorId = userID }
+            blogPostId <-runDB $ insert blogPostWithUser
             redirect $ PostDetailsR blogPostId
         _ -> defaultLayout $(widgetFile "posts/new") 

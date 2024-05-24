@@ -14,3 +14,4 @@ Email
 BlogPost
     title Text
     article Markdown
+    authorId UserId

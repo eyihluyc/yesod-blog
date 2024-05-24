@@ -2,3 +2,4 @@
 
 <article .jumbotron>
     #{blogPostArticle blogPost}
+    <p>Author: #{show (blogPostAuthorId blogPost)}
