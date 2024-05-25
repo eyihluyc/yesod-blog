@@ -85,7 +85,7 @@ authenticateAs (Entity _ u) = do
     request $ do
         setMethod "POST"
         addPostParam "ident" $ authorEmail u
-        setUrl $ AuthR $ PluginR "dummy" []
+        setUrl $ AuthR $ PluginR "authEmail" []
 
 {- | Create a user.  The dummy email entry helps to confirm that foreign-key
  checking is switched off in wipeDB for those database backends which need it.

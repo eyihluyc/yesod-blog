@@ -5,4 +5,6 @@ import TestImport
 spec :: Spec
 spec = withApp $ do
     describe "getAuthorsR" $ do
-        it "todo" $ \_ -> pending
+        it "loads the users" $ do
+            get AuthorsR
+            statusIs 200
