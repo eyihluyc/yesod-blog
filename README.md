@@ -3,10 +3,10 @@
 After installing Postgres, run:
 
 ```
-createuser yesod-blog --pwprompt --superuser
+createuser yesodblog --pwprompt --superuser
 # Enter password yesod-blog when prompted
-createdb yesod-blog
-createdb yesod-blog_test
+createdb yblog
+createdb yblog_test
 ```
 
 ## Haskell Setup
