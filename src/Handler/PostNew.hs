@@ -8,10 +8,11 @@ import Yesod.Form.Bootstrap3
 import Yesod.Markdown (markdownField)
 
 blogPostForm :: AuthorId -> AForm Handler BlogPost
-blogPostForm authorId = BlogPost
-    <$> areq textField (bfs ("Title" :: Text)) Nothing
-    <*> areq markdownField (bfs ("Article" :: Text)) Nothing
-    <*> pure authorId
+blogPostForm authorId =
+    BlogPost
+        <$> areq textField (bfs ("Title" :: Text)) Nothing
+        <*> areq markdownField (bfs ("Article" :: Text)) Nothing
+        <*> pure authorId
 
 getPostNewR :: Handler Html
 getPostNewR = do
@@ -27,7 +28,7 @@ postPostNewR = do
     ((res, widget), enctype) <- runFormPost $ renderBootstrap3 BootstrapBasicForm (blogPostForm authorID)
     case res of
         FormSuccess blogPost -> do
-            let blogPostWithAuthor = blogPost { blogPostAuthorId = authorID }
-            blogPostId <-runDB $ insert blogPostWithAuthor
+            let blogPostWithAuthor = blogPost{blogPostAuthorId = authorID}
+            blogPostId <- runDB $ insert blogPostWithAuthor
             redirect $ PostDetailsR blogPostId
-        _ -> defaultLayout $(widgetFile "posts/new") 
+        _ -> defaultLayout $(widgetFile "posts/new")

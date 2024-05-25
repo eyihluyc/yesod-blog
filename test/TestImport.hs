@@ -1,24 +1,25 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE OverloadedStrings #-}
-module TestImport
-    ( module TestImport
-    , module X
-    ) where
 
-import Application           (makeFoundation, makeLogWare)
-import ClassyPrelude         as X hiding (delete, deleteBy, Handler)
-import Database.Persist      as X hiding (get)
-import Database.Persist.Sql  (SqlPersistM, runSqlPersistMPool, rawExecute, rawSql, unSingle)
+module TestImport (
+    module TestImport,
+    module X,
+) where
+
+import Application (makeFoundation, makeLogWare)
+import ClassyPrelude as X hiding (Handler, delete, deleteBy)
+import Database.Persist as X hiding (get)
+import Database.Persist.Sql (SqlPersistM, rawExecute, rawSql, runSqlPersistMPool, unSingle)
 import Database.Persist.SqlBackend (getEscapedRawName)
-import Foundation            as X
-import Model                 as X
-import Test.Hspec            as X
+import Foundation as X
+import Model as X
+import Test.Hspec as X
 import Text.Shakespeare.Text (st)
-import Yesod.Default.Config2 (useEnv, loadYamlSettings)
-import Yesod.Auth            as X
-import Yesod.Test            as X
-import Yesod.Core.Unsafe     (fakeHandlerGetLogger)
+import Yesod.Auth as X
+import Yesod.Core.Unsafe (fakeHandlerGetLogger)
+import Yesod.Default.Config2 (loadYamlSettings, useEnv)
+import Yesod.Test as X
 
 runDB :: SqlPersistM a -> YesodExample App a
 runDB query = do
@@ -33,13 +34,13 @@ runHandler handler = do
     app <- getTestYesod
     fakeHandlerGetLogger appLogger app handler
 
-
 withApp :: SpecWith (TestApp App) -> Spec
 withApp = before $ do
-    settings <- loadYamlSettings
-        ["config/test-settings.yml", "config/settings.yml"]
-        []
-        useEnv
+    settings <-
+        loadYamlSettings
+            ["config/test-settings.yml", "config/settings.yml"]
+            []
+            useEnv
     foundation <- makeFoundation settings
     wipeDB foundation
     logWare <- liftIO $ makeLogWare foundation
@@ -63,18 +64,22 @@ wipeDB app = runDBWithApp app $ do
 
 getTables :: DB [Text]
 getTables = do
-    tables <- rawSql [st|
+    tables <-
+        rawSql
+            [st|
         SELECT table_name
         FROM information_schema.tables
         WHERE table_schema = 'public'
         AND table_type = 'BASE TABLE';
-    |] []
+    |]
+            []
 
     return $ map unSingle tables
 
--- | Authenticate as a user. This relies on the `auth-dummy-login: true` flag
--- being set in test-settings.yaml, which enables dummy authentication in
--- Foundation.hs
+{- | Authenticate as a user. This relies on the `auth-dummy-login: true` flag
+ being set in test-settings.yaml, which enables dummy authentication in
+ Foundation.hs
+-}
 authenticateAs :: Entity Author -> YesodExample App ()
 authenticateAs (Entity _ u) = do
     request $ do
@@ -82,14 +87,15 @@ authenticateAs (Entity _ u) = do
         addPostParam "ident" $ authorEmail u
         setUrl $ AuthR $ PluginR "dummy" []
 
--- | Create a user.  The dummy email entry helps to confirm that foreign-key
--- checking is switched off in wipeDB for those database backends which need it.
+{- | Create a user.  The dummy email entry helps to confirm that foreign-key
+ checking is switched off in wipeDB for those database backends which need it.
+-}
 createAuthor :: Text -> YesodExample App (Entity Author)
 createAuthor email = runDB $ do
-    author <- insertEntity Author
-        { authorEmail = email
-        , authorPassword = Nothing
-        , authorVerkey = Nothing
-        , authorVerified = True
-        }
-    return author
+    insertEntity
+        Author
+            { authorEmail = email
+            , authorPassword = Nothing
+            , authorVerkey = Nothing
+            , authorVerified = True
+            }

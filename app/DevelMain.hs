@@ -1,12 +1,4 @@
--- | Running your app inside GHCi.
---
--- This option provides significantly faster code reload compared to
--- @yesod devel@. However, you do not get automatic code reload
--- (which may be a benefit, depending on your perspective). To use this:
---
--- 1. Start up GHCi
---
--- $ stack ghci yesod-blog:lib --no-load --work-dir .stack-work-devel
+-- \$ stack ghci yesod-blog:lib --no-load --work-dir .stack-work-devel
 --
 -- 2. Load this module
 --
@@ -34,33 +26,42 @@
 -- If you change a template, you'll need to either exit GHCi and reload,
 -- or manually @touch@ another Haskell module.
 
+{- | Running your app inside GHCi.
+
+ This option provides significantly faster code reload compared to
+ @yesod devel@. However, you do not get automatic code reload
+ (which may be a benefit, depending on your perspective). To use this:
+
+ 1. Start up GHCi
+-}
 module DevelMain where
 
-import Prelude
 import Application (getApplicationRepl, shutdownApp)
+import Prelude
 
-import Control.Monad ((>=>))
 import Control.Concurrent
+import Control.Monad ((>=>))
 import Data.IORef
 import Foreign.Store
-import Network.Wai.Handler.Warp
 import GHC.Word
+import Network.Wai.Handler.Warp
 
--- | Start or restart the server.
--- newStore is from foreign-store.
--- A Store holds onto some data across ghci reloads
+{- | Start or restart the server.
+ newStore is from foreign-store.
+ A Store holds onto some data across ghci reloads
+-}
 update :: IO ()
 update = do
     mtidStore <- lookupStore tidStoreNum
     case mtidStore of
-      -- no server running
-      Nothing -> do
-          done <- storeAction doneStore newEmptyMVar
-          tid <- start done
-          _ <- storeAction (Store tidStoreNum) (newIORef tid)
-          return ()
-      -- server is already running
-      Just tidStore -> restartAppInNewThread tidStore
+        -- no server running
+        Nothing -> do
+            done <- storeAction doneStore newEmptyMVar
+            tid <- start done
+            _ <- storeAction (Store tidStoreNum) (newIORef tid)
+            return ()
+        -- server is already running
+        Just tidStore -> restartAppInNewThread tidStore
   where
     doneStore :: Store (MVar ())
     doneStore = Store 0
@@ -72,10 +73,10 @@ update = do
         withStore doneStore takeMVar
         readStore doneStore >>= start
 
-
-    -- | Start the server in a separate thread.
-    start :: MVar () -- ^ Written to when the thread is killed.
-          -> IO ThreadId
+    -- \| Start the server in a separate thread.
+    start ::
+        MVar () -> -- \^ Written to when the thread is killed.
+        IO ThreadId
     start done = do
         (port, site, app) <- getApplicationRepl
         forkFinally
@@ -90,11 +91,11 @@ shutdown :: IO ()
 shutdown = do
     mtidStore <- lookupStore tidStoreNum
     case mtidStore of
-      -- no server running
-      Nothing -> putStrLn "no Yesod app running"
-      Just tidStore -> do
-          withStore tidStore $ readIORef >=> killThread
-          putStrLn "Yesod app is shutdown"
+        -- no server running
+        Nothing -> putStrLn "no Yesod app running"
+        Just tidStore -> do
+            withStore tidStore $ readIORef >=> killThread
+            putStrLn "Yesod app is shutdown"
 
 tidStoreNum :: Word32
 tidStoreNum = 1

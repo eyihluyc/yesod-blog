@@ -1,47 +1,48 @@
-{-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE ExplicitForAll #-}
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 
 module Foundation where
 
-import Import.NoFoundation
-import Data.Kind            (Type)
-import Database.Persist.Sql (ConnectionPool, runSqlPool)
-import Text.Hamlet          (hamletFile)
-import Text.Jasmine         (minifym)
 import Control.Monad.Logger (LogSource)
+import Data.Kind (Type)
+import Database.Persist.Sql (ConnectionPool, runSqlPool)
+import Import.NoFoundation
+import Text.Jasmine (minifym)
 
-import Yesod.Auth.Email
 import Network.Mail.Mime
+import Yesod.Auth.Email
 
-import Yesod.Default.Util   (addStaticContentExternal)
-import Yesod.Core.Types     (Logger)
-import qualified Yesod.Core.Unsafe as Unsafe
 import qualified Data.CaseInsensitive as CI
 import qualified Data.Text.Encoding as TE
+import Yesod.Core.Types (Logger)
+import qualified Yesod.Core.Unsafe as Unsafe
+import Yesod.Default.Util (addStaticContentExternal)
 
 import qualified Data.Text.Lazy.Encoding
-import           Text.Blaze.Html.Renderer.Utf8 (renderHtml)
-import           Text.Hamlet                   (shamlet)
-import           Text.Shakespeare.Text         (stext)
+import Text.Blaze.Html.Renderer.Utf8 (renderHtml)
+import Text.Hamlet (hamletFile)
+import Text.Shakespeare.Text (stext)
 
--- | The foundation datatype for your application. This can be a good place to
--- keep settings and values requiring initialization before your application
--- starts running, such as database connections. Every handler will have
--- access to the data present here.
+{- | The foundation datatype for your application. This can be a good place to
+ keep settings and values requiring initialization before your application
+ starts running, such as database connections. Every handler will have
+ access to the data present here.
+-}
 data App = App
-    { appSettings    :: AppSettings
-    , appStatic      :: Static -- ^ Settings for static file serving.
-    , appConnPool    :: ConnectionPool -- ^ Database connection pool.
+    { appSettings :: AppSettings
+    , appStatic :: Static
+    -- ^ Settings for static file serving.
+    , appConnPool :: ConnectionPool
+    -- ^ Database connection pool.
     , appHttpManager :: Manager
-    , appLogger      :: Logger
+    , appLogger :: Logger
     }
 
 data MenuItem = MenuItem
@@ -72,8 +73,10 @@ mkYesodData "App" $(parseRoutesFile "config/routes.yesodroutes")
 type Form x = Html -> MForm (HandlerFor App) (FormResult x, Widget)
 
 -- | A convenient synonym for database access functions.
-type DB a = forall (m :: Type -> Type).
-    (MonadUnliftIO m) => ReaderT SqlBackend m a
+type DB a =
+    forall (m :: Type -> Type).
+    (MonadUnliftIO m) =>
+    ReaderT SqlBackend m a
 
 -- Please see the documentation for the Yesod typeclass. There are a number
 -- of settings which can be configured by overriding methods here.
@@ -89,9 +92,11 @@ instance Yesod App where
     -- Store session data on the client in encrypted cookies,
     -- default session idle timeout is 120 minutes
     makeSessionBackend :: App -> IO (Maybe SessionBackend)
-    makeSessionBackend _ = Just <$> defaultClientSessionBackend
-        120    -- timeout in minutes
-        "config/client_session_key.aes"
+    makeSessionBackend _ =
+        Just
+            <$> defaultClientSessionBackend
+                120 -- timeout in minutes
+                "config/client_session_key.aes"
 
     -- Yesod Middleware allows you to run code before and after each handler function.
     -- The defaultYesodMiddleware adds the response header "Vary: Accept, Accept-Language" and performs authorization checks.
@@ -112,40 +117,46 @@ instance Yesod App where
         mcurrentRoute <- getCurrentRoute
 
         -- Get the breadcrumbs, as defined in the YesodBreadcrumbs instance.
-        (title, parents) <- breadcrumbs
+        -- (title, parents) <- breadcrumbs
 
         -- Define the menu items of the header.
         let menuItems =
-                [ NavbarLeft $ MenuItem
-                    { menuItemLabel = "Home"
-                    , menuItemRoute = HomeR
-                    , menuItemAccessCallback = True
-                    }
-                ,   NavbarLeft $ MenuItem
-                    { menuItemLabel = "New Post"
-                    , menuItemRoute = PostNewR
-                    , menuItemAccessCallback = True
-                    }
-                ,   NavbarLeft $ MenuItem
-                    { menuItemLabel = "Authors"
-                    , menuItemRoute = AuthorsR
-                    , menuItemAccessCallback = True
-                    }
-                , NavbarLeft $ MenuItem
-                    { menuItemLabel = "Profile"
-                    , menuItemRoute = ProfileR
-                    , menuItemAccessCallback = isJust muser
-                    }
-                , NavbarRight $ MenuItem
-                    { menuItemLabel = "Login"
-                    , menuItemRoute = AuthR LoginR
-                    , menuItemAccessCallback = isNothing muser
-                    }
-                , NavbarRight $ MenuItem
-                    { menuItemLabel = "Logout"
-                    , menuItemRoute = AuthR LogoutR
-                    , menuItemAccessCallback = isJust muser
-                    }
+                [ NavbarLeft $
+                    MenuItem
+                        { menuItemLabel = "Home"
+                        , menuItemRoute = HomeR
+                        , menuItemAccessCallback = True
+                        }
+                , NavbarLeft $
+                    MenuItem
+                        { menuItemLabel = "New Post"
+                        , menuItemRoute = PostNewR
+                        , menuItemAccessCallback = True
+                        }
+                , NavbarLeft $
+                    MenuItem
+                        { menuItemLabel = "Authors"
+                        , menuItemRoute = AuthorsR
+                        , menuItemAccessCallback = True
+                        }
+                , NavbarLeft $
+                    MenuItem
+                        { menuItemLabel = "Profile"
+                        , menuItemRoute = ProfileR
+                        , menuItemAccessCallback = isJust muser
+                        }
+                , NavbarRight $
+                    MenuItem
+                        { menuItemLabel = "Login"
+                        , menuItemRoute = AuthR LoginR
+                        , menuItemAccessCallback = isNothing muser
+                        }
+                , NavbarRight $
+                    MenuItem
+                        { menuItemLabel = "Logout"
+                        , menuItemRoute = AuthR LogoutR
+                        , menuItemAccessCallback = isJust muser
+                        }
                 ]
 
         let navbarLeftMenuItems = [x | NavbarLeft x <- menuItems]
@@ -162,20 +173,20 @@ instance Yesod App where
 
         pc <- widgetToPageContent $ do
             addStylesheet $ StaticR css_bootstrap_css
-                                    -- ^ generated from @Settings/StaticFiles.hs@
+            -- \^ generated from @Settings/StaticFiles.hs@
             $(widgetFile "default-layout")
         withUrlRenderer $(hamletFile "templates/default-layout-wrapper.hamlet")
 
     -- The page to be redirected to when authentication is required.
-    authRoute
-        :: App
-        -> Maybe (Route App)
+    authRoute ::
+        App ->
+        Maybe (Route App)
     authRoute _ = Just $ AuthR LoginR
 
-    isAuthorized
-        :: Route App  -- ^ The route the user is visiting.
-        -> Bool       -- ^ Whether or not this is a "write" request.
-        -> Handler AuthResult
+    isAuthorized ::
+        Route App -> -- \^ The route the user is visiting.
+        Bool -> -- \^ Whether or not this is a "write" request.
+        Handler AuthResult
     -- Routes not requiring authentication.
     isAuthorized (AuthR _) _ = return Authorized
     isAuthorized HomeR _ = return Authorized
@@ -186,7 +197,6 @@ instance Yesod App where
     isAuthorized (PostDetailsR _) _ = return Authorized
     isAuthorized AuthorsR _ = return Authorized
     isAuthorized (AuthorDetailsR _) _ = return Authorized
-
     -- the profile route requires that the user is authenticated, so we
     -- delegate to that function
     isAuthorized PostNewR True = isAuthenticated
@@ -196,11 +206,11 @@ instance Yesod App where
     -- and names them based on a hash of their content. This allows
     -- expiration dates to be set far in the future without worry of
     -- users receiving stale content.
-    addStaticContent
-        :: Text  -- ^ The file extension
-        -> Text -- ^ The MIME content type
-        -> LByteString -- ^ The contents of the file
-        -> Handler (Maybe (Either Text (Route App, [(Text, Text)])))
+    addStaticContent ::
+        Text -> -- \^ The file extension
+        Text -> -- \^ The MIME content type
+        LByteString -> -- \^ The contents of the file
+        Handler (Maybe (Either Text (Route App, [(Text, Text)])))
     addStaticContent ext mime content = do
         master <- getYesod
         let staticDir = appStaticDir $ appSettings master
@@ -221,9 +231,9 @@ instance Yesod App where
     shouldLogIO :: App -> LogSource -> LogLevel -> IO Bool
     shouldLogIO app _source level =
         return $
-        appShouldLogAll (appSettings app)
-            || level == LevelWarn
-            || level == LevelError
+            appShouldLogAll (appSettings app)
+                || level == LevelWarn
+                || level == LevelError
 
     makeLogger :: App -> IO Logger
     makeLogger = return . appLogger
@@ -233,13 +243,13 @@ instance YesodBreadcrumbs App where
     -- Takes the route that the user is currently on, and returns a tuple
     -- of the 'Text' that you want the label to display, and a previous
     -- breadcrumb route.
-    breadcrumb
-        :: Route App  -- ^ The route the user is visiting currently.
-        -> Handler (Text, Maybe (Route App))
+    breadcrumb ::
+        Route App -> -- \^ The route the user is visiting currently.
+        Handler (Text, Maybe (Route App))
     breadcrumb HomeR = return ("Home", Nothing)
     breadcrumb (AuthR _) = return ("Login", Just HomeR)
     breadcrumb ProfileR = return ("Profile", Just HomeR)
-    breadcrumb  _ = return ("home", Nothing)
+    breadcrumb _ = return ("home", Nothing)
 
 -- How to run database actions.
 instance YesodPersist App where
@@ -259,24 +269,29 @@ instance YesodAuth App where
     -- Where to send a user after successful login
     loginDest :: App -> Route App
     loginDest _ = HomeR
+
     -- Where to send a user after logout
     logoutDest :: App -> Route App
     logoutDest _ = HomeR
+
     -- Override the above two destinations when a Referer: header is present
     redirectToReferer :: App -> Bool
     redirectToReferer _ = True
 
-    authenticate :: (MonadHandler m, HandlerSite m ~ App)
-                 => Creds App -> m (AuthenticationResult App)
+    authenticate ::
+        (MonadHandler m, HandlerSite m ~ App) =>
+        Creds App ->
+        m (AuthenticationResult App)
     authenticate creds = liftHandler $ runDB $ do
         x <- insertBy $ Author (credsIdent creds) Nothing Nothing False
-        return $ Authenticated $
-            case x of
-                Left (Entity userid _) -> userid -- existing user
-                Right userid -> userid -- newly added user
+        return $
+            Authenticated $
+                case x of
+                    Left (Entity userid _) -> userid -- existing user
+                    Right userid -> userid -- newly added user
 
     authPlugins :: App -> [AuthPlugin App]
-    authPlugins app = [authEmail]
+    authPlugins _ = [authEmail]
 
 instance YesodAuthEmail App where
     type AuthEmailId App = AuthorId
@@ -292,65 +307,75 @@ instance YesodAuthEmail App where
         liftIO $ putStrLn $ "Copy/ Paste this URL in your browser:" <> verurl
 
         -- Send email.
-        liftIO $ renderSendMail (emptyMail $ Address Nothing "noreply")
-            { mailTo = [Address Nothing email]
-            , mailHeaders =
-                [ ("Subject", "Verify your email address")
-                ]
-            , mailParts = [[textPart, htmlPart]]
-            }
+        liftIO $
+            renderSendMail
+                (emptyMail $ Address Nothing "noreply")
+                    { mailTo = [Address Nothing email]
+                    , mailHeaders =
+                        [ ("Subject", "Verify your email address")
+                        ]
+                    , mailParts = [[textPart, htmlPart]]
+                    }
       where
-        textPart = Part
-            { partType = "text/plain; charset=utf-8"
-            , partEncoding = None
-            , partDisposition = DefaultDisposition
-            , partContent = PartContent $ Data.Text.Lazy.Encoding.encodeUtf8
-                [stext|
+        textPart =
+            Part
+                { partType = "text/plain; charset=utf-8"
+                , partEncoding = None
+                , partDisposition = DefaultDisposition
+                , partContent =
+                    PartContent $
+                        Data.Text.Lazy.Encoding.encodeUtf8
+                            [stext|
                     Please confirm your email address by clicking on the link below.
 
                     #{verurl}
 
                     Thank you
                 |]
-            , partHeaders = []
-            }
-        htmlPart = Part
-            { partType = "text/html; charset=utf-8"
-            , partEncoding = None
-            , partDisposition = DefaultDisposition
-            , partContent = PartContent $ renderHtml
-                [shamlet|
+                , partHeaders = []
+                }
+        htmlPart =
+            Part
+                { partType = "text/html; charset=utf-8"
+                , partEncoding = None
+                , partDisposition = DefaultDisposition
+                , partContent =
+                    PartContent $
+                        renderHtml
+                            [shamlet|
                     <p>Please confirm your email address by clicking on the link below.
                     <p>
                         <a href=#{verurl}>#{verurl}
                     <p>Thank you
                 |]
-            , partHeaders = []
-            }
-    getVerifyKey = liftHandler . runDB . fmap (join . fmap authorVerkey) . get
+                , partHeaders = []
+                }
+    getVerifyKey = liftHandler . runDB . fmap (authorVerkey =<<) . get
     setVerifyKey uid key = liftHandler $ runDB $ update uid [AuthorVerkey =. Just key]
     verifyAccount uid = liftHandler $ runDB $ do
         mu <- get uid
         case mu of
             Nothing -> return Nothing
-            Just u -> do
+            Just _ -> do
                 update uid [AuthorVerified =. True, AuthorVerkey =. Nothing]
                 return $ Just uid
-    getPassword = liftHandler . runDB . fmap (join . fmap authorPassword) . get
+    getPassword = liftHandler . runDB . fmap (authorVerkey =<<) . get
     setPassword uid pass = liftHandler . runDB $ update uid [AuthorPassword =. Just pass]
     getEmailCreds email = liftHandler $ runDB $ do
         mu <- getBy $ UniqueAuthor email
         case mu of
             Nothing -> return Nothing
-            Just (Entity uid u) -> return $ Just EmailCreds
-                { emailCredsId = uid
-                , emailCredsAuthId = Just uid
-                , emailCredsStatus = isJust $ authorPassword u
-                , emailCredsVerkey = authorVerkey u
-                , emailCredsEmail = email
-                }
+            Just (Entity uid u) ->
+                return $
+                    Just
+                        EmailCreds
+                            { emailCredsId = uid
+                            , emailCredsAuthId = Just uid
+                            , emailCredsStatus = isJust $ authorPassword u
+                            , emailCredsVerkey = authorVerkey u
+                            , emailCredsEmail = email
+                            }
     getEmail = liftHandler . runDB . fmap (fmap authorEmail) . get
-
 
 -- | Access function to determine if a user is logged in.
 isAuthenticated :: Handler AuthResult
