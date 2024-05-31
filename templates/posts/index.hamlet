@@ -1,10 +1,10 @@
 <h1> All Posts
 
-<div .jumbotron>
+<.jumbotron>
     <ul>
         $forall (E.Value blogid, E.Value title, E.Value name, E.Value authorId) <- allPosts
             <h4>
                 <li>
-                    <a href=@{PostDetailsR blogid}>#{title}
+                    <a href=@{PostsR (PostDetailsR blogid)}>#{title}
                     by 
-                    <a href=@{AuthorDetailsR authorId}>#{name}
+                    <a href=@{AuthorsR (AuthorDetailsR authorId)}>#{name}

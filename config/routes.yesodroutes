@@ -10,7 +10,10 @@
 / HomeR GET
 /profile ProfileR GET
 
-/posts/new PostNewR GET POST
-/posts/!#BlogPostId PostDetailsR GET
-/authors AuthorsR GET
-/authors/#AuthorId AuthorDetailsR GET
+/posts PostsR: 
+    /new PostNewR GET POST
+    !#BlogPostId PostDetailsR GET
+
+/authors AuthorsR:
+    / AuthorIndexR GET
+    /#AuthorId AuthorDetailsR GET

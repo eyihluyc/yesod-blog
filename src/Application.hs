@@ -62,7 +62,7 @@ import System.Log.FastLogger (
 -- Don't forget to add new modules to your cabal file!
 
 import Handler.AuthorDetails
-import Handler.Authors
+import Handler.AuthorIndex
 import Handler.Common
 import Handler.Home
 import Handler.PostDetails

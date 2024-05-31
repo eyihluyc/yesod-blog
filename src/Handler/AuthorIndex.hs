@@ -1,12 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Handler.Authors where
+module Handler.AuthorIndex where
 
 import Import
 
-getAuthorsR :: Handler Html
-getAuthorsR = do
-    allAuthors <- runDB $ selectList [] []
+getAuthorIndexR :: Handler Html
+getAuthorIndexR = do
+    allAuthors <- runDB $ selectList [] [Desc AuthorId]
     defaultLayout $ do
         $(widgetFile "authors/index")
