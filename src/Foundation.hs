@@ -13,6 +13,7 @@ module Foundation where
 import Control.Monad.Logger (LogSource)
 import Data.Kind (Type)
 import Database.Persist.Sql (ConnectionPool, runSqlPool)
+import Email (Email (getEmail), getEmail, mkEmail)
 import Import.NoFoundation
 import Text.Jasmine (minifym)
 
@@ -282,13 +283,17 @@ instance YesodAuth App where
         (MonadHandler m, HandlerSite m ~ App) =>
         Creds App ->
         m (AuthenticationResult App)
-    authenticate creds = liftHandler $ runDB $ do
-        x <- insertBy $ Author (credsIdent creds) Nothing Nothing False
-        return $
-            Authenticated $
-                case x of
-                    Left (Entity userid _) -> userid -- existing user
-                    Right userid -> userid -- newly added user
+    authenticate creds =
+        case mkEmail (credsIdent creds) of
+            Right email ->
+                liftHandler $ runDB $ do
+                    x <- insertBy $ Author email Nothing Nothing Nothing
+                    return $
+                        Authenticated $
+                            case x of
+                                Left (Entity userid _) -> userid -- existing user
+                                Right userid -> userid -- newly added user
+            Left err -> error (unpack err)
 
     authPlugins :: App -> [AuthPlugin App]
     authPlugins _ = [authEmail]
@@ -299,7 +304,9 @@ instance YesodAuthEmail App where
     afterPasswordRoute _ = HomeR
 
     addUnverified email verkey =
-        liftHandler $ runDB $ insert $ Author email Nothing (Just verkey) False
+        case mkEmail email of
+            Right email' -> liftHandler $ runDB $ insert $ Author email' Nothing (Just verkey) Nothing
+            Left err -> error (unpack err)
 
     sendVerifyEmail email _ verurl = do
         -- Print out to the console the verification email, for easier
@@ -357,25 +364,30 @@ instance YesodAuthEmail App where
         case mu of
             Nothing -> return Nothing
             Just _ -> do
-                update uid [AuthorVerified =. True, AuthorVerkey =. Nothing]
+                currentTime <- liftIO getCurrentTime
+                update uid [AuthorVerified =. Just currentTime, AuthorVerkey =. Nothing]
                 return $ Just uid
     getPassword = liftHandler . runDB . fmap (authorVerkey =<<) . get
     setPassword uid pass = liftHandler . runDB $ update uid [AuthorPassword =. Just pass]
-    getEmailCreds email = liftHandler $ runDB $ do
-        mu <- getBy $ UniqueAuthor email
-        case mu of
-            Nothing -> return Nothing
-            Just (Entity uid u) ->
-                return $
-                    Just
-                        EmailCreds
-                            { emailCredsId = uid
-                            , emailCredsAuthId = Just uid
-                            , emailCredsStatus = isJust $ authorPassword u
-                            , emailCredsVerkey = authorVerkey u
-                            , emailCredsEmail = email
-                            }
-    getEmail = liftHandler . runDB . fmap (fmap authorEmail) . get
+    getEmailCreds email = liftHandler $
+        runDB $
+            case mkEmail email of
+                Right email' -> do
+                    mu <- getBy $ UniqueAuthor email'
+                    case mu of
+                        Nothing -> return Nothing
+                        Just (Entity uid u) ->
+                            return $
+                                Just
+                                    EmailCreds
+                                        { emailCredsId = uid
+                                        , emailCredsAuthId = Just uid
+                                        , emailCredsStatus = isJust $ authorPassword u
+                                        , emailCredsVerkey = authorVerkey u
+                                        , emailCredsEmail = email
+                                        }
+                Left err -> error (unpack err)
+    getEmail = liftHandler . runDB . fmap (fmap (fmap Email.getEmail authorEmail)) . get
 
 -- | Access function to determine if a user is logged in.
 isAuthenticated :: Handler AuthResult

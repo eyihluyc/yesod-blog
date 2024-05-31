@@ -16,6 +16,7 @@ module Model where
 
 import ClassyPrelude.Yesod
 import Database.Persist.Quasi
+import Email (Email)
 import Yesod.Markdown (Markdown)
 
 share
