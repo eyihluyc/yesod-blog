@@ -17,7 +17,7 @@ blogPostForm authorId =
 getPostNewR :: Handler Html
 getPostNewR = do
     authorID <- requireAuthId
-    (widget, enctype) <- generateFormPost $ renderBootstrap3 BootstrapBasicForm (blogPostForm authorID)
+    ((_, widget), enctype) <- runFormPost $ renderBootstrap3 BootstrapBasicForm (blogPostForm authorID)
     defaultLayout $ do
         setTitle "New Post"
         $(widgetFile "posts/new")
@@ -30,5 +30,7 @@ postPostNewR = do
         FormSuccess blogPost -> do
             let blogPostWithAuthor = blogPost{blogPostAuthorId = authorID}
             blogPostId <- runDB $ insert blogPostWithAuthor
-            redirect $ PostDetailsR blogPostId
-        _ -> defaultLayout $(widgetFile "posts/new")
+            setMessage "Post successfully created!"
+            redirect $ PostsR (PostDetailsR blogPostId)
+        FormMissing -> defaultLayout $(widgetFile "posts/new")
+        FormFailure _ -> defaultLayout $(widgetFile "posts/new")
