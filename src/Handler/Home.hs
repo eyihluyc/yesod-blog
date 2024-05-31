@@ -26,4 +26,5 @@ getHomeR = do
                 , author E.^. AuthorId
                 )
     defaultLayout $ do
+        setTitle "Posts"
         $(widgetFile "posts/index")
